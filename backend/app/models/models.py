@@ -2,7 +2,13 @@ from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
+import enum
 
+class RoleEnum(str, enum.Enum):
+    athlete = "athlete"
+    coach = "coach"
+    parent = "parent"
+    admin = "admin"
 class User(Base):
     __tablename__ = "users"
 
@@ -10,7 +16,7 @@ class User(Base):
     name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     password_hash = Column(String, nullable=False)
-    role = Column(Enum("Athlete", "Coach", "Admin", name="user_role"), nullable=False) 
+    role = Column(Enum(RoleEnum), default=RoleEnum.athlete, nullable=False) 
     created_at = Column(DateTime, default=datetime.now)
 
     workouts = relationship("Workout", back_populates="user")
@@ -100,6 +106,7 @@ class Team(Base):
     created_at = Column(DateTime, default=datetime.now)
 
     users = relationship("User", secondary="user_teams", back_populates="teams")
+    groups = relationship("Group", back_populates="team")
     user_teams = relationship("UserTeams", back_populates="team", overlaps="users")
     user_teams = relationship("UserTeams", back_populates="team")
 
