@@ -7,16 +7,13 @@ from app.utils import hash_password, verify_password
 
 
 def get_user_by_email(db: Session, email: str):
-    """Return a User by email, or None if not found."""
     return db.query(User).filter(User.email == email).first()
+
+def get_user_by_id(db: Session, id: int):
+    return db.query(User).filter(User.id == id).first()
 
 
 def create_user(db: Session, user_in: UserCreate) -> User:
-    """
-    Create a new user.
-    - Reject duplicate emails (400).
-    - Hash the password before storing.
-    """
     existing = get_user_by_email(db, user_in.email)
     if existing:
         raise HTTPException(
@@ -28,8 +25,8 @@ def create_user(db: Session, user_in: UserCreate) -> User:
         name=user_in.name,
         email=user_in.email,
         password_hash=hash_password(user_in.password),
-        role=user_in.role or "athlete",
     )
+
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -37,11 +34,6 @@ def create_user(db: Session, user_in: UserCreate) -> User:
 
 
 def authenticate_user(db: Session, email: str, password: str):
-    """
-    Check credentials.
-    - Return User if valid.
-    - Return None if invalid (caller will raise 401).
-    """
     user = get_user_by_email(db, email)
     if not user:
         return None

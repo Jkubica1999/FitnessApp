@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum, JSON 
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum, JSON, Boolean, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
@@ -7,8 +7,6 @@ import enum
 class RoleEnum(str, enum.Enum):
     athlete = "athlete"
     coach = "coach"
-    parent = "parent"
-    admin = "admin"
 class User(Base):
     __tablename__ = "users"
 
@@ -110,7 +108,6 @@ class Team(Base):
     user_teams = relationship("UserTeams", back_populates="team", overlaps="users")
     user_teams = relationship("UserTeams", back_populates="team")
 
-from sqlalchemy import UniqueConstraint
 
 class Group(Base):
     __tablename__ = "groups"
@@ -125,12 +122,16 @@ class Group(Base):
 
 class UserTeams(Base):
     __tablename__ = "user_teams"
+    __table_args__ = (
+        UniqueConstraint('user_id', 'group_id', 'role', name='uq_user_group_role'),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)
     group_id = Column(Integer, ForeignKey("groups.id"))
-    role = Column(Enum("member", "coach", "admin", name="team_role"), default="member")
+    role = Column(Enum(RoleEnum), default=RoleEnum.athlete, nullable=False)
+    is_team_admin = Column(Boolean, default=False)
     joined_at = Column(DateTime, default=datetime.now)
 
     user = relationship("User", back_populates="user_teams")
