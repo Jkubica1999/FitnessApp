@@ -9,8 +9,9 @@ pydantic~=2.8
 pydantic-settings~=2.4      # For env config
 
 # --- Authentication ---
-passlib[bcrypt]~=1.7        # Password hashing
-python-jose[cryptography]~=3.3  # JWT handling
+passlib[bcrypt]==1.7.4   # For hashing passwords
+bcrypt==4.0.1            
+python-jose[cryptography]==3.3
 python-multipart~=0.0.9     # Required for form-based login if you use OAuth2PasswordRequestForm
 
 # --- Dev tools / optional ---
