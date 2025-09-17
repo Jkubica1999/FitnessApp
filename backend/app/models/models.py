@@ -5,6 +5,7 @@ from datetime import datetime
 from app.database import Base
 import enum
 
+# Enums for user roles, summary periods, and goal/test statuses
 class RoleEnum(str, enum.Enum):
     athlete = "athlete"
     coach = "coach"
@@ -19,6 +20,7 @@ class StatusEnum(str, enum.Enum):
     in_progress = "in_progress"
     completed = "completed"
 
+# User model
 class User(Base):
     __tablename__ = "users"
 
@@ -28,6 +30,7 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.now)
 
+    # Relationships
     workouts = relationship("Workout", back_populates="user")
     goals = relationship("Goal", back_populates="user")
     mood_checkins = relationship("MoodCheckIn", back_populates="user")
@@ -38,6 +41,7 @@ class User(Base):
     teams = association_proxy("user_teams", "team")
     groups = association_proxy("user_teams", "group")
 
+# Workout model
 class Workout(Base):
     __tablename__ = "workouts"
 
@@ -48,13 +52,14 @@ class Workout(Base):
     start_date = Column(DateTime, default=datetime.now)
     end_date = Column(DateTime)
     description = Column(String, nullable=False)
-    exercises = Column(JSON, nullable=False) 
-    results = Column(JSON, nullable=True)
+    exercises = Column(JSON, nullable=False)  # list of exercises with sets and details 
+    results = Column(JSON, nullable=True)  # actual performed exercises and results
     update_log = Column(JSON, nullable=True)   # history of changes, deload weeks, notes
     created_at = Column(DateTime, default=datetime.now)
 
     user = relationship("User", back_populates="workouts")
 
+# Test model for fitness tests
 class Test(Base):
     __tablename__ = "tests"
 
@@ -63,13 +68,14 @@ class Test(Base):
     group_test_id = Column(Integer, ForeignKey("group_tests.id", ondelete="SET NULL"), index=True, nullable=True)
     title = Column(String, nullable=False)
     instructions = Column(String)
-    parameters = Column(JSON, nullable=False)
+    parameters = Column(JSON, nullable=False)  # test parameters and metrics e.g. "5km run", "max push-ups"
     created_at = Column(DateTime, default=datetime.now)
     taken_at = Column(DateTime)
     results = Column(JSON)
 
     user = relationship("User", back_populates="tests")
 
+# Goal model for user goals
 class Goal(Base):
     __tablename__ = "goals"
 
@@ -83,16 +89,18 @@ class Goal(Base):
 
     user = relationship("User", back_populates="goals")
 
+# MoodCheckIn model for daily mood tracking
 class MoodCheckIn(Base):
     __tablename__ = "mood_checkins"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
-    mood = Column(JSON, nullable=False)
+    mood = Column(JSON, nullable=False)  # e.g. {"energy": 7, "stress": 3, "focus": 8}
     created_at = Column(DateTime, default=datetime.now)
 
     user = relationship("User", back_populates="mood_checkins")
 
+# JournalEntry model for user journals
 class JournalEntry(Base):
     __tablename__ = "journal_entries"
 
@@ -103,6 +111,7 @@ class JournalEntry(Base):
 
     user = relationship("User", back_populates="journal_entries")
 
+# Summary model for daily/weekly/monthly summaries to decrease size of data for future/longterm analysis
 class Summary(Base):
     __tablename__ = "summaries"
 
@@ -118,6 +127,7 @@ class Summary(Base):
 
     user = relationship("User", back_populates="summaries")
 
+# Team model for multi-user collaboration
 class Team(Base):
     __tablename__ = "teams"
 
@@ -130,6 +140,7 @@ class Team(Base):
     user_teams = relationship("UserTeams", back_populates="team")
     users = association_proxy("user_teams", "user")
 
+# Group model for grouping users within a team
 class Group(Base):
     __tablename__ = "groups"
     __table_args__ = (
@@ -148,6 +159,7 @@ class Group(Base):
     group_workouts = relationship("GroupWorkout", back_populates="group")
     group_tests = relationship("GroupTest", back_populates="group")
 
+# UserTeams association table for many-to-many user/team/group relationships
 class UserTeams(Base):
     __tablename__ = "user_teams"
     __table_args__ = (
@@ -159,14 +171,15 @@ class UserTeams(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
     team_id = Column(Integer, ForeignKey("teams.id", ondelete="CASCADE"), index=True, nullable=False)
     group_id = Column(Integer, ForeignKey("groups.id", ondelete="CASCADE"), index=True, nullable=True)
-    role = Column(Enum(RoleEnum), default=RoleEnum.athlete, nullable=False)
-    is_team_admin = Column(Boolean, default=False)
+    role = Column(Enum(RoleEnum), default=RoleEnum.athlete, nullable=False) # athlete or coach
+    is_team_admin = Column(Boolean, default=False) # e.g. team owner/manager that can manage users in a team
     joined_at = Column(DateTime, default=datetime.now)
 
     user = relationship("User", back_populates="user_teams")
     team = relationship("Team", back_populates="user_teams")
     group = relationship("Group", back_populates="user_teams")
 
+# GroupWorkout model for predefined workouts for groups created by coaches
 class GroupWorkout(Base):
     __tablename__ = "group_workouts"
 
@@ -183,6 +196,7 @@ class GroupWorkout(Base):
     group = relationship("Group", back_populates="group_workouts")
     coach = relationship("User")
 
+# GroupTest model for predefined tests for groups created by coaches
 class GroupTest(Base):
     __tablename__ = "group_tests"
 

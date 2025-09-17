@@ -6,8 +6,10 @@ from app.database import get_db
 from app.crud.users import get_user_by_id
 from app.utils import decode_access_token
 
+# OAuth2 scheme for extracting bearer token from requests
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
+# Dependency to get the current authenticated user from the token
 def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
     cred_exc = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
