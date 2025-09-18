@@ -153,7 +153,7 @@ class Group(Base):
     name = Column(String, nullable=False)
 
     team = relationship("Team", back_populates="groups")
-    user_teams = relationship("UserTeams", back_populates="group")
+    user_teams = relationship("UserTeams", back_populates="group", foreign_keys="[UserTeams.group_id]")
     users = association_proxy("user_teams", "user")
 
     group_workouts = relationship("GroupWorkout", back_populates="group")
@@ -177,7 +177,7 @@ class UserTeams(Base):
 
     user = relationship("User", back_populates="user_teams")
     team = relationship("Team", back_populates="user_teams")
-    group = relationship("Group", back_populates="user_teams")
+    group = relationship("Group", back_populates="user_teams", foreign_keys=[group_id])
 
 # GroupWorkout model for predefined workouts for groups created by coaches
 class GroupWorkout(Base):

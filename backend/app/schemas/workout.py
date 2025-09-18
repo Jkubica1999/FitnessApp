@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import List, Optional, Annotated
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 
 # SetEntry schema for individual set details in an exercise
@@ -17,13 +17,27 @@ class SetEntry(BaseModel):
 # Exercise schema containing a name and a list of sets
 class Exercise(BaseModel):
     name: str = Field(min_length=1, max_length=120)
-    sets: List[SetEntry] = Field(min_items=1)
+    sets: List[SetEntry]
+
+    @field_validator("sets")
+    @classmethod
+    def sets_must_have_at_least_one(cls, v):
+        if not v or len(v) < 1:
+            raise ValueError("At least one set is required")
+        return v
 
 
 # ExerciseResult schema for storing results of performed exercises
 class ExerciseResult(BaseModel):
     name: str = Field(min_length=1, max_length=120)
-    sets: List[SetEntry] = Field(min_items=1)
+    sets: List[SetEntry]
+
+    @field_validator("sets")
+    @classmethod
+    def sets_must_have_at_least_one(cls, v):
+        if not v or len(v) < 1:
+            raise ValueError("At least one set is required")
+        return v
 
 
 # UpdateLogEntry schema for tracking changes to a workout
@@ -46,9 +60,16 @@ class WorkoutBase(BaseModel):
 
 # Schema for creating a new Workout
 class WorkoutCreate(WorkoutBase):
-    exercises: List[Exercise] = Field(min_items=1)
+    exercises: List[Exercise]
     results: Optional[List[ExerciseResult]] = None
     update_log: Optional[List[UpdateLogEntry]] = None
+
+    @field_validator("exercises")
+    @classmethod
+    def exercises_must_have_at_least_one(cls, v):
+        if not v or len(v) < 1:
+            raise ValueError("At least one exercise is required")
+        return v
 
 
 # Schema for updating an existing Workout

@@ -15,7 +15,14 @@ class GroupWorkoutBase(BaseModel):
 # Schema for creating a new GroupWorkout
 class GroupWorkoutCreate(GroupWorkoutBase):
     group_id: int
-    exercises: List[Exercise] = Field(min_items=1)
+    exercises: List[Exercise]
+
+    @classmethod
+    def validate_exercises(cls, value):
+        if not value or len(value) < 1:
+            raise ValueError("At least one exercise is required.")
+        return value
+
 
 
 # Schema for updating an existing GroupWorkout
