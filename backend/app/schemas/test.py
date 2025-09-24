@@ -1,6 +1,6 @@
 # Test data validation and serialization schemas
 from datetime import datetime
-from typing import List, Optional, Annotated
+from typing import List, Optional
 
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from enum import Enum
@@ -18,28 +18,51 @@ class MetricTypeEnum(str, Enum):
 
 # Enum for units of measurement for each metric type
 class WeightEnum(str, Enum):
-    kg = "kg"
-    lbs = "lbs"
+    kilograms = "kg"
+    pounds = "lb"
 
 class DistanceEnum(str, Enum):
-    meters = "meters"
-    km = "km"
-    miles = "miles"
-    yards = "yards"
+    meters = "m"
+    kilometers = "km"
+    miles = "mi"
+    yards = "yd"
 
 class TimeEnum(str, Enum):
-    seconds = "sec"
+    seconds = "s"
     minutes = "min"
-    hours = "hrs"
+    hours = "h"
 
 class HeightEnum(str, Enum):
-    cm = "cm"
+    centymeters = "cm"
     inches = "in"
 
 class LengthEnum(str, Enum):
-    cm = "cm"
-    meters = "meters"
+    centymeters = "cm"
+    meters = "m"
     inches = "in"
+
+METRIC_UNITS = {
+    MetricTypeEnum.weight: WeightEnum,
+    MetricTypeEnum.distance: DistanceEnum,
+    MetricTypeEnum.time: TimeEnum,
+    MetricTypeEnum.height: HeightEnum,
+    MetricTypeEnum.length: LengthEnum,
+    # reps, heart_rate, rpe are unitless
+}
+
+# Helper function to validate unit based on metric type
+def validate_unit_for_type(metric_type: MetricTypeEnum, unit: Optional[str]) -> Optional[str]:
+    unit_enum = METRIC_UNITS.get(metric_type)
+
+    if unit_enum:
+        allowed = {e.value for e in unit_enum}
+        if unit not in allowed:
+            raise ValueError(f"Invalid unit '{unit}' for metric type '{metric_type}'. Allowed: {allowed}")
+    else:
+        if unit is not None:
+            raise ValueError(f"Metric type '{metric_type}' should not have a unit")
+
+    return unit
 
 # Schema for individual metric details
 class MetricEntry(BaseModel):
@@ -50,28 +73,12 @@ class MetricEntry(BaseModel):
     @classmethod
     def validate_unit(cls, v, values):
         metric_type = values.get("type")
-        if metric_type == MetricTypeEnum.weight:
-            if v not in {e.value for e in WeightEnum}:
-                raise ValueError(f"Invalid unit for weight: {v}")
-        elif metric_type == MetricTypeEnum.distance:
-            if v not in {e.value for e in DistanceEnum}:
-                raise ValueError(f"Invalid unit for distance: {v}")
-        elif metric_type == MetricTypeEnum.time:
-            if v not in {e.value for e in TimeEnum}:
-                raise ValueError(f"Invalid unit for time: {v}")
-        elif metric_type == MetricTypeEnum.height:
-            if v not in {e.value for e in HeightEnum}:
-                raise ValueError(f"Invalid unit for height: {v}")
-        elif metric_type == MetricTypeEnum.length:
-            if v not in {e.value for e in LengthEnum}:
-                raise ValueError(f"Invalid unit for length: {v}")
-        elif metric_type in {MetricTypeEnum.reps, MetricTypeEnum.heart_rate, MetricTypeEnum.rpe}:
-            if v is not None:
-                raise ValueError(f"No unit should be provided for type: {metric_type}")
-        return v
+        if metric_type is None:
+            return v
+        return validate_unit_for_type(metric_type, v)
 
-# Base schema for parameters
-class TestParameterBase(BaseModel):
+# Schema for parameters of a test
+class TestParameter(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     description: Optional[str] = Field(default=None, max_length=500)
     metrics: List[MetricEntry]
@@ -93,23 +100,57 @@ class MetricResult(BaseModel):
     @classmethod
     def validate_unit(cls, v, values):
         metric_type = values.get("type")
-        if metric_type == MetricTypeEnum.weight:
-            if v not in {e.value for e in WeightEnum}:
-                raise ValueError(f"Invalid unit for weight: {v}")
-        elif metric_type == MetricTypeEnum.distance:
-            if v not in {e.value for e in DistanceEnum}:
-                raise ValueError(f"Invalid unit for distance: {v}")
-        elif metric_type == MetricTypeEnum.time:
-            if v not in {e.value for e in TimeEnum}:
-                raise ValueError(f"Invalid unit for time: {v}")
-        elif metric_type == MetricTypeEnum.height:
-            if v not in {e.value for e in HeightEnum}:
-                raise ValueError(f"Invalid unit for height: {v}")
-        elif metric_type == MetricTypeEnum.length:
-            if v not in {e.value for e in LengthEnum}:
-                raise ValueError(f"Invalid unit for length: {v}")
-        elif metric_type in {MetricTypeEnum.reps, MetricTypeEnum.heart_rate, MetricTypeEnum.rpe}:
-            if v is not None:
-                raise ValueError(f"No unit should be provided for type: {metric_type}")
+        if metric_type is None:
+            return v
+        return validate_unit_for_type(metric_type, v)
+    
+#base schema for Test, shared by create and update schemas
+class TestBase(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
+    instructions: Optional[str] = Field(default=None, max_length=2000)
+
+# Schema for creating a new Test
+class TestCreate(TestBase):
+    parameters: List[TestParameter]
+
+    @field_validator("parameters")
+    @classmethod
+    def parameters_must_have_at_least_one(cls, v):
+        if not v or len(v) < 1:
+            raise ValueError("At least one parameter is required")
         return v
-         
+    
+# Schema for updating an existing Test
+class TestUpdate(TestBase):
+    parameters: Optional[List[TestParameter]] = None
+
+    @field_validator("parameters")
+    @classmethod
+    def parameters_must_have_at_least_one_if_provided(cls, v):
+        if v is not None and len(v) < 1:
+            raise ValueError("At least one parameter is required if parameters are provided")
+        return v
+
+# Schema for recording results of a taken Test
+class TestResult(BaseModel):
+    taken_at: datetime = Field(default_factory=datetime.now)
+    results: List[MetricResult]
+
+    @field_validator("results")
+    @classmethod
+    def results_must_have_at_least_one(cls, v):
+        if not v or len(v) < 1:
+            raise ValueError("At least one result is required")
+        return v
+    
+# Full schema for reading a Test with all details
+class TestOut(TestBase):
+    id: int
+    user_id: int
+    group_test_id: Optional[int] = None
+    parameters: List[TestParameter]
+    created_at: datetime
+    taken_at: Optional[datetime] = None
+    results: Optional[List[MetricResult]] = None
+
+    model_config = ConfigDict(from_attributes=True)

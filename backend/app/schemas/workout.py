@@ -78,7 +78,6 @@ class WorkoutUpdate(BaseModel):
     description: Optional[str] = Field(default=None, min_length=1, max_length=2000)
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
-    group_workout_id: Optional[int] = None
     exercises: Optional[List[Exercise]] = None
     results: Optional[List[ExerciseResult]] = None
     update_log: Optional[List[UpdateLogEntry]] = None

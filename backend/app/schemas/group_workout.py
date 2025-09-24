@@ -1,36 +1,32 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 from .workout import Exercise
-
 
 # Base schema for GroupWorkout, shared by create and update schemas
 class GroupWorkoutBase(BaseModel):
     title: str = Field(min_length=1, max_length=120)
     description: str = Field(min_length=1, max_length=2000)
 
-
 # Schema for creating a new GroupWorkout
 class GroupWorkoutCreate(GroupWorkoutBase):
     group_id: int
     exercises: List[Exercise]
 
+    @field_validator("exercises")
     @classmethod
     def validate_exercises(cls, value):
         if not value or len(value) < 1:
             raise ValueError("At least one exercise is required.")
         return value
 
-
-
 # Schema for updating an existing GroupWorkout
 class GroupWorkoutUpdate(BaseModel):
     title: Optional[str] = Field(default=None, min_length=1, max_length=120)
     description: Optional[str] = Field(default=None, min_length=1, max_length=2000)
     exercises: Optional[List[Exercise]] = None
-
 
 # Output schema for returning GroupWorkout data to clients
 class GroupWorkoutOut(BaseModel):
